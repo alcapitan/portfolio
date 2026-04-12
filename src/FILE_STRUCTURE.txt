@@ -1,0 +1,15 @@
+public/              # Fichiers constants, pas traités par Vite
+src/
+├── assets/          # Images, icônes, fonts (optimisés par Vite)
+├── components/      # Composants réutilisables (Boutons, Inputs, Cards)
+│   ├── ui/          # Composants atomiques (souvent daisyUI stylisés)
+│   └── common/      # Composants partagés (Navbar, Footer)
+├── features/        # Logique par section du portfolio
+│   ├── hero/        # Composants + logique liés à la section Hero
+│   ├── projects/    # Liste des projets, filtres, etc.
+│   └── contact/     # Formulaire de contact
+├── hooks/           # Tes Custom Hooks React (ex: useLocalStorage)
+├── layouts/         # Structures de page (ex: MainLayout.jsx)
+├── pages/           # Pages entières (si tu utilises un Router plus tard)
+├── styles/          # Fichiers CSS globaux
+└── utils/           # Fonctions JS pures (formateurs de date, calculs)
