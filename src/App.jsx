@@ -13,7 +13,7 @@ function App() {
       <Header />
       <div className="p-10 flex flex-col gap-4 items-center">
         <h1 className="text-3xl font-bold underline">Coucou Milan !</h1>
-        <button className="btn btn-primary">Voir haut, rêver grand, aller loin</button>
+        <button className="btn btn-accent text-white">Voir haut, rêver grand, aller loin</button>
       </div>
       <section id="center">
         <div className="hero">
