@@ -2,6 +2,7 @@ import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
+import Header from './components/common/Header'
 import './App.css'
 
 function App() {
@@ -9,8 +10,9 @@ function App() {
 
   return (
     <>
+      <Header />
       <div className="p-10 flex flex-col gap-4 items-center">
-        <h1 class="text-3xl font-bold underline">Coucou Milan !</h1>
+        <h1 className="text-3xl font-bold underline">Coucou Milan !</h1>
         <button className="btn btn-primary">Voir haut, rêver grand, aller loin</button>
       </div>
       <section id="center">
