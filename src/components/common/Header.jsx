@@ -3,7 +3,7 @@ import ThemeControllerSwap from "./ThemeControllerSwap.jsx";
 
 function Header() {
     return (
-        <div className="navbar bg-base-100 shadow-sm px-8">
+        <div className="navbar bg-base-100 shadow-md px-8">
             <div className="flex-1 gap-2">
                 <a href="/" className="flex items-center gap-4 group">
                     <img 
