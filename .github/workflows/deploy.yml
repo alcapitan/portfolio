@@ -1,0 +1,67 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  # 1er job : construire l'image et l'envoyer sur le registre
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions: # principe du moindre privilège
+      contents: read # lire le code
+      packages: write # écrire les packages
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6 # récupère le code source pour que la VM y ait accès
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4 # Connexion à l'espace de stockage Docker Github
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7 # Construit avec le Dockerfile et l'envoie sur ghcr.io
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+  # 2eme job : se connecter au serveur et mettre à jour le container
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push # attends que le 1er job soit terminé
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1 
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Exécution directe sur le serveur
+          script: |
+            DOMAIN_NAME="${{ secrets.MY_DOMAIN }}"
+            docker pull ghcr.io/${{ github.repository }}:latest
+            docker stop portfolio || true
+            docker rm portfolio || true
+            docker run -d \
+              --name portfolio \
+              --restart always \
+              --network gateway \
+              --label "traefik.enable=true" \
+              --label "traefik.http.routers.portfolio.rule=Host(\`$DOMAIN_NAME\`)" \
+              --label "traefik.http.routers.portfolio.entrypoints=websecure" \
+              --label "traefik.http.routers.portfolio.tls.certresolver=letsencrypt" \
+              --label "traefik.http.services.portfolio.loadbalancer.server.port=80" \
+              ghcr.io/${{ github.repository }}:latest
+            docker image prune -f
