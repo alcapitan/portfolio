@@ -44,6 +44,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx # pour pouvoir utiliser le cache gha
+        uses: docker/setup-buildx-action@v4
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v7 # Construit avec le Dockerfile et l'envoie sur ghcr.io
         with:
@@ -57,7 +60,7 @@ jobs:
 
   # 3eme job : se connecter au serveur et mettre à jour le container
   deploy:
-    needs: build-and-push # attends que le 1er job soit terminé
+    needs: build-and-push # attends que le 2eme job soit terminé
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' # seulement si c'est un push sur main
     runs-on: ubuntu-latest
     permissions:
