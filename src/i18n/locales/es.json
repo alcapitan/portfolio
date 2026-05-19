@@ -1,0 +1,12 @@
+{
+  "nav": {
+    "about": "Acerca de mí",
+    "contact": "Contáctame",
+    "my_projects": "Mis proyectos"
+  },
+  "welcome": {
+    "button_text": "Ver el repositorio en GitHub",
+    "text": "Mi cartera está en construcción.",
+    "title": "¡Hola Milán!"
+  }
+}
