@@ -1,0 +1,12 @@
+{
+  "nav": {
+    "about": "About me",
+    "my_projects": "My projects",
+    "contact": "Contact me"
+  },
+  "welcome": {
+    "button_text": "View the GitHub repo",
+    "text": "My portfolio is under construction",
+    "title": "Hello Milan!"
+  }
+}
