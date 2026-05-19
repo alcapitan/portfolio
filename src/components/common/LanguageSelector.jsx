@@ -13,7 +13,7 @@ function LanguageSelector() {
 
     return (
         <div className="dropdown dropdown-end">
-            <div tabIndex={0} role="button" className="btn btn-ghost mr-2">
+            <div tabIndex={0} role="button" className="btn btn-ghost">
                 {currentLanguage.flag} <span className="uppercase ml-1">{currentLanguage.code}</span>
             </div>
             <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-39">
