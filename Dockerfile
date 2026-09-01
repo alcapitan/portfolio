@@ -1,5 +1,5 @@
 # Étape 1 : Build
-FROM node:26-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 RUN npm install -g pnpm
 COPY pnpm-lock.yaml package.json ./
