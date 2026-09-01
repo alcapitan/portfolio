@@ -2,9 +2,9 @@ name: CI/CD
 
 on:
   push:
-    branches: [ main, feat/setup-ci-cd ]
+    branches: [main, feat/setup-ci-cd]
   pull_request:
-    branches: [ main ]
+    branches: [main, develop]
 
 jobs:
   # 1er job: validation
@@ -15,12 +15,12 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 11 }
       - uses: actions/setup-node@v4
-        with: { node-version: 24, cache: 'pnpm' }
+        with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install
       - run: pnpm lint # Vérifie le code
       - run: pnpm test # Exécute les tests
       - run: pnpm build # Vérifie que le build React passe
-  
+
   # 2eme job : construire l'image et l'envoyer sur le registre
   build-and-push:
     needs: quality-check
@@ -32,7 +32,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6 # récupère le code source pour que la VM y ait accès
-      
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with: { version: 11 }
@@ -67,27 +67,53 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Install cloudflared
+        run: |
+          curl -fsSL -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
+          rm cloudflared.deb
+
+      - name: Configure SSH client
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          CF_ID: ${{ secrets.CF_CLIENT_ID }}
+          CF_SECRET: ${{ secrets.CF_CLIENT_SECRET }}
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER: ${{ secrets.SERVER_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          cat <<EOF > ~/.ssh/config
+          Host $HOST
+              User $USER
+              IdentityFile ~/.ssh/id_rsa
+              StrictHostKeyChecking no
+              ProxyCommand cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET
+          EOF
+
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1 
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          port: ${{ secrets.SERVER_PORT }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Exécution directe sur le serveur
-          script: |
-            DOMAIN_NAME="${{ secrets.MY_DOMAIN }}"
-            docker pull ghcr.io/${{ github.repository }}:latest
+        env:
+          DOMAIN_NAME: ${{ secrets.MY_DOMAIN }}
+          REPO: ${{ github.repository }}
+          HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          ssh "$HOST" bash -s <<EOF
+            DOMAIN_NAME="$DOMAIN_NAME"
+            docker pull ghcr.io/$REPO:latest
             docker stop portfolio || true
             docker rm portfolio || true
-            docker run -d \
-              --name portfolio \
-              --restart always \
-              --network gateway \
-              --label "traefik.enable=true" \
-              --label "traefik.http.routers.portfolio.rule=Host(\`$DOMAIN_NAME\`)" \
-              --label "traefik.http.routers.portfolio.entrypoints=websecure" \
-              --label "traefik.http.routers.portfolio.tls.certresolver=letsencrypt" \
-              --label "traefik.http.services.portfolio.loadbalancer.server.port=80" \
-              ghcr.io/${{ github.repository }}:latest
+            docker run -d \\
+              --name portfolio \\
+              --restart always \\
+              --network gateway \\
+              --label "traefik.enable=true" \\
+              --label "traefik.http.routers.portfolio.rule=Host(\\\`\$DOMAIN_NAME\\\`)" \\
+              --label "traefik.http.routers.portfolio.entrypoints=websecure" \\
+              --label "traefik.http.routers.portfolio.tls.certresolver=letsencrypt" \\
+              --label "traefik.http.services.portfolio.loadbalancer.server.port=80" \\
+              ghcr.io/$REPO:latest
             docker image prune -f
+          EOF
