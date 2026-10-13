@@ -11,11 +11,11 @@ jobs:
   quality-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with: { version: 11 }
-      - uses: actions/setup-node@v4
-        with: { node-version: 24, cache: "pnpm" }
+      - uses: actions/setup-node@v7
+        with: { node-version: 26, cache: "pnpm" }
       - run: pnpm install
       - run: pnpm lint # Vérifie le code
       - run: pnpm test # Exécute les tests
@@ -31,10 +31,10 @@ jobs:
       packages: write # écrire les packages
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6 # récupère le code source pour que la VM y ait accès
+        uses: actions/checkout@v7 # récupère le code source pour que la VM y ait accès
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with: { version: 11 }
 
       - name: Login to GitHub Container Registry
@@ -101,19 +101,14 @@ jobs:
           HOST: ${{ secrets.SERVER_HOST }}
         run: |
           ssh "$HOST" bash -s <<EOF
-            DOMAIN_NAME="$DOMAIN_NAME"
-            docker pull ghcr.io/$REPO:latest
-            docker stop portfolio || true
-            docker rm portfolio || true
-            docker run -d \\
-              --name portfolio \\
-              --restart always \\
-              --network gateway \\
-              --label "traefik.enable=true" \\
-              --label "traefik.http.routers.portfolio.rule=Host(\\\`\$DOMAIN_NAME\\\`)" \\
-              --label "traefik.http.routers.portfolio.entrypoints=websecure" \\
-              --label "traefik.http.routers.portfolio.tls.certresolver=letsencrypt" \\
-              --label "traefik.http.services.portfolio.loadbalancer.server.port=80" \\
-              ghcr.io/$REPO:latest
+            set -e
+            cd ~/containers/portfolio/
+
+            # Connexion au registre GitHub pour pull l'image privée
+            echo "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+
+            # Mise à jour et relance propre du conteneur
+            docker compose pull
+            docker compose up -d --remove-orphans
             docker image prune -f
           EOF

@@ -1,0 +1,18 @@
+services:
+  portfolio:
+    image: ghcr.io/alcapitan/portfolio:latest
+    container_name: portfolio
+    restart: unless-stopped
+    networks:
+      - gateway
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=gateway"
+      - "traefik.http.routers.portfolio.rule=Host(`alcapitan.me`)"
+      - "traefik.http.routers.portfolio.entrypoints=websecure"
+      - "traefik.http.routers.portfolio.tls.certresolver=letsencrypt"
+      - "traefik.http.services.portfolio.loadbalancer.server.port=80"
+
+networks:
+  gateway:
+    external: true
