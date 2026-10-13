@@ -11,7 +11,7 @@
     {
       devShells.${system}.default = pkgs.mkShell {
           packages = with pkgs; [
-              nodejs_24 # end of support 30 apr 2028
+              nodejs_26 # end of support 30 Apr 2029
               pnpm
           ];
       };
