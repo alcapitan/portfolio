@@ -24,7 +24,7 @@ jobs:
   # 2eme job : construire l'image et l'envoyer sur le registre
   build-and-push:
     needs: quality-check
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' # seulement si c'est un push sur main
+    if: github.event_name == 'push' && github.ref_name == 'main' # seulement si c'est un push sur main
     runs-on: ubuntu-latest
     permissions: # principe du moindre privilège
       contents: read # lire le code
@@ -61,7 +61,7 @@ jobs:
   # 3eme job : se connecter au serveur et mettre à jour le container
   deploy:
     needs: build-and-push # attends que le 2eme job soit terminé
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' # seulement si c'est un push sur main
+    if: github.event_name == 'push' && github.ref_name == 'main' # seulement si c'est un push sur main
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -99,6 +99,8 @@ jobs:
           DOMAIN_NAME: ${{ secrets.MY_DOMAIN }}
           REPO: ${{ github.repository }}
           HOST: ${{ secrets.SERVER_HOST }}
+          ACTOR: ${{ github.actor }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ssh "$HOST" bash -s <<EOF
             set -e
