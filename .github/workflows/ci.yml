@@ -1,0 +1,24 @@
+name: CI - Quality Check
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  # 1er job: validation
+  quality-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with: { version: 11 }
+      - uses: actions/setup-node@v7
+        with: { node-version: 26, cache: "pnpm" }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint # Vérifie le code
+      - run: pnpm test # Exécute les tests
+      - run: pnpm build # Vérifie que le build React passe

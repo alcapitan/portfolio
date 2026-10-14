@@ -1,30 +1,21 @@
-name: CI/CD
+name: CD - Build & Deploy
 
 on:
-  push:
+  workflow_dispatch: # Permet de lancer le run à la main depuis l'onglet Actions
+  workflow_run:
+    workflows: ["CI - Quality Check"]
+    types: [completed] # déploiement uniquement si la vérification est validé
     branches: [main, feat/setup-ci-cd]
-  pull_request:
-    branches: [main, develop]
+
+# pour éviter qu'un même commit sur feat/setup-ci-cd n'écrase la session github  actions faite sur main
+concurrency:
+  group: cd-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
 
 jobs:
-  # 1er job: validation
-  quality-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with: { version: 11 }
-      - uses: actions/setup-node@v7
-        with: { node-version: 26, cache: "pnpm" }
-      - run: pnpm install
-      - run: pnpm lint # Vérifie le code
-      - run: pnpm test # Exécute les tests
-      - run: pnpm build # Vérifie que le build React passe
-
   # 2eme job : construire l'image et l'envoyer sur le registre
   build-and-push:
-    needs: quality-check
-    if: github.event_name == 'push' && github.ref_name == 'main' # seulement si c'est un push sur main
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions: # principe du moindre privilège
       contents: read # lire le code
@@ -32,10 +23,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7 # récupère le code source pour que la VM y ait accès
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with: { version: 11 }
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4 # Connexion à l'espace de stockage Docker Github
@@ -54,18 +43,16 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-          cache-from: type=gha # Cache magique GitHub
+            ghcr.io/${{ github.repository }}:${{ github.event.workflow_run.head_sha }}
+          cache-from: type=gha
           cache-to: type=gha,mode=max
 
   # 3eme job : se connecter au serveur et mettre à jour le container
   deploy:
     needs: build-and-push # attends que le 2eme job soit terminé
-    if: github.event_name == 'push' && github.ref_name == 'main' # seulement si c'est un push sur main
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     steps:
       - name: Install cloudflared
         run: |
@@ -96,8 +83,6 @@ jobs:
 
       - name: Deploy via SSH
         env:
-          DOMAIN_NAME: ${{ secrets.MY_DOMAIN }}
-          REPO: ${{ github.repository }}
           HOST: ${{ secrets.SERVER_HOST }}
           ACTOR: ${{ github.actor }}
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
